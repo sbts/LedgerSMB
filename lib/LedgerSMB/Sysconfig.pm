@@ -3,12 +3,31 @@
 use strict;
 use warnings;
 #use 5.012;
+    use Config;
 
     use Config::IniFiles;
     my $ConfigFileName='ledgersmb.conf';
     my $cfg = Config::IniFiles->new( -file => $ConfigFileName ) || die @Config::IniFiles::errors;
-
-
+=head
+ehuelsmann (IRC)
+m-sbts: def 'pathsep',
+    section => 'main',
+    key => 'pathsep',
+    default => ':',
+    doc => qq|
+The documentation for the 'main.pathsep' key|;
+how about that?
+it generates a functional interface LedgerSMB::Sysconfig::pathsep
+which can be used as
+LedgerSMB::Sysconfig::pathsep('\')
+to set the value.
+￼ylavoie
+ehuelsmann (IRC): Ok, I'll create one for setup for the moment.
+E￼ehuelsmann (IRC)
+m-ylavoie, we can do that, or pass a variable which says that it should use the 'normal' form?
+m-sbts, it sets the default value in the config hash
+and it sets the documentation in a doc-hash.
+=cut
     # fixme #
     # for now, we read the current version number from LedgerSMB.conf
     # as soon as we branch 1.5,
@@ -18,6 +37,12 @@ use warnings;
     # this $Version variable is only used to initialise the actual main.version key
     my $versionfile = 'LedgerSMB.pm';
     my $Version = '';
+    if ( ! -f $versionfile ) { $versionfile = 'lib/LedgerSMB.pm' };     # new dirtree (1.5) location
+    if ( ! -f $versionfile ) { $versionfile = '../lib/LedgerSMB.pm' };  # maybe we are running from t/*
+    if ( ! -f $versionfile ) { $versionfile = '../../lib/LedgerSMB.pm' }; # maybe we are running from t/data/*
+    if ( ! -f $versionfile ) { $versionfile = '../LedgerSMB.pm' };              # old dirtree whe running from t/*
+    if ( ! -f $versionfile ) { $versionfile = '../../LedgerSMB.pm' };           # old dirtree when running from t/data/*
+    if ( ! -f $versionfile ) { die ("ERROR: can't locate LedgerSMB.pm") };
     open my $version_fh, '<', $versionfile or die "Could not open '$versionfile' $!\n";
     while (my $line = <$version_fh>) {
        chomp $line;
@@ -36,6 +61,7 @@ package Sysconfig::Entry;
     use Moo;
     use MooX::Types::MooseLike::Base qw(:all);
     use namespace::autoclean;
+    use Config;
 
     has 'section' => (
         is => 'ro',
@@ -52,13 +78,13 @@ package Sysconfig::Entry;
 
     has 'default' => (
         is => 'ro',
-        isa => Str,
+        isa => AnyOf[ Str, ArrayRef[] ],
         required => 1,
     );
 
     has 'value' => (
         is => 'rwp',
-        isa => Str,
+        isa => AnyOf[ Str, ArrayRef[] ],
         required => 0,
     );
 
@@ -103,10 +129,28 @@ package Sysconfig::Entry;
         $args{'value'} = $args{'default'} unless $args{'value'};
         $args{'value'} = $cfg->val($args{'section'},$args{'name'}) if $cfg->val($args{'section'},$args{'name'});
         $args{'value'} = $ENV{"$args{'section'}_$args{'name'}"} if $ENV{"$args{'section'}_$args{'name'}"};
+
+        # if one of the following keys then set an ENV VAR
+        if ( "$args{'section'}.$args{'name'}" eq 'environment.PATH' ) {
+            $ENV{'PATH'} .= $Config{path_sep} . ( join $Config{path_sep}, $args{'value'});
+        } elsif ( "$args{'section'}.$args{'name'}" eq 'environment.PERL5LIB' ) {
+            $ENV{'PERL5LIB'} .= $Config{path_sep} . ( join $Config{path_sep}, $args{'value'});
+        } elsif ( "$args{'section'}.$args{'name'}" eq 'database.host' ) {
+            $ENV{PGHOST} = $args{'value'};
+        } elsif ( "$args{'section'}.$args{'name'}" eq 'database.port' ) {
+            $ENV{PGPORT} = $args{'value'};
+        } elsif ( "$args{'section'}.$args{'name'}" eq 'database.sslmode' ) {
+            $ENV{PGSSLMODE} = $args{'value'};
+        } elsif ( "$args{'section'}.$args{'name'}" eq 'paths.tempdir' ) {
+            $ENV{HOME} = $args{'value'};
+        }
+        #my $map = { 'database.host' => 'PGHOST', 'database.port' => 'PGPORT', 'paths.tempdir' => 'HOME' };
+        #$ENV{$map{$section_name}} = $section_value if exists $map{$section_name};
+            #or something like it.
         return \%args;
     };
 
-    ##### not required for Moo #####__PACKAGE__->meta->make_immutable;     # explained below
+    ##### not required for Moo #####__PACKAGE__->meta->make_immutable;
 no Moo;       # turn off Moo-specific scaffolding
 
 #######
@@ -121,8 +165,8 @@ package LedgerSMB::Sysconfig;
 #    use Data::Dumper;
     binmode STDOUT, ':utf8';
     binmode STDERR, ':utf8';
-    
-    
+
+
     use Config; 
     our $pathsep = $Config{path_sep};
 
@@ -135,7 +179,6 @@ package LedgerSMB::Sysconfig;
     #);
 
     sub _ValidSection ($) {
-        #my $self = shift;
         my($section) = @_;
         my $old_carplevel = $Carp::CarpLevel;
         $Carp::CarpLevel = 1;
@@ -145,7 +188,6 @@ package LedgerSMB::Sysconfig;
     }
 
     sub _ValidEntry ($;$) {
-        #my $self = shift;
         my($section, $key) = @_;
         my $old_carplevel = $Carp::CarpLevel;
         $Carp::CarpLevel = 1;
@@ -164,6 +206,29 @@ package LedgerSMB::Sysconfig;
         $EntryStore{$tmp{section}}{$tmp{name}}=Sysconfig::Entry->new(@args);
     }
 
+
+#sub def {
+#    my ($name, %args) = @_;
+#    my $sec = $args{section};
+#    my $key = $args{key};
+#    $config{$sec}->{$key} = $cfg->val($sec, $key, $args{default});
+#    $docs{$sec}->{$key} = $args{doc};
+#
+#    # create a functional interface
+#    *$name = sub {
+#        my ($nv) = @_; # new value to be assigned
+#        my $cv = $config{$sec}->{$key};
+##        $config{$sec}->{$key} = $nv
+#            if scalar(@_) > 0;
+#        return $cv;
+#    };
+#}
+
+
+
+
+
+
     sub summary ($;$) {
         #my $self = shift;
         my($section, $key, $value) = @_;
@@ -174,17 +239,7 @@ package LedgerSMB::Sysconfig;
         #my $self = shift;
         my($section, $key, $value) = @_;
         _ValidEntry($section, $key);
-#        my $Description = '';
-#        my $a_ref = $EntryStore{$section}{$key}->description;
-#        my @a = @$a_ref;
-#        my @a = @ { $EntryStore{$section}{$key}->description };
-#        foreach my $s ( @a ) {
-
-#        my $Description = join "\n", @{ $EntryStore{$section}{$key}->description };
         my $Description = join "\n", @{ $EntryStore{$section}{$key}->description };
-#        foreach my $s ( @ { $EntryStore{$section}{$key}->description } ) {
-#            $Description .= $s . "\n";
-#        }
         return $Description;
     }
     sub description_as_array ($;$) {
@@ -487,32 +542,6 @@ declare_config_key (
 #PERL_LOCAL_LIB_ROOT='/home/dcg/perl5'
 #PERL_MM_OPT=INSTALL_BASE=/home/dcg/perl5
 
-# The following Keys are Depricated or have been renamed
-declare_config_key (
-    section      => 'main',
-    name         => 'cssdir',
-    default      => 'deprecated',
-    summary      => 'please rename to css_uri',
-    description  => [ 'deprecated',],
-    configurable => 1,
-    writeable    => 1,
-    deprecated   => 1,
-    replacedby   => 'css_uri',
-);
-
-declare_config_key (
-    section      => 'main',
-    name         => 'fs_cssdir',
-    default      => 'deprecated',
-    summary      => 'please rename to css_ondisk',
-    description  => [ 'deprecated',],
-    configurable => 1,
-    writeable    => 1,
-    deprecated   => 1,
-    replacedby   => 'css_ondisk',
-);
-
-
 declare_config_key (
     section      => 'main',
     name         => 'dojo_theme',
@@ -690,57 +719,6 @@ declare_config_key (
     configurable => 1,
     writeable    => 1,
 );
-
-#declare_config_key (
-#    section      => 'programs',
-#    name         => 'pdflatex',
-#    default      => '/usr/bin/pdflatex',
-#    summary      => 'path to pdflatex',
-#    description  => [  '# For latex and pdflatex, specify  full path.  These will be used to configure',
-#                       '# Template::Latex so it can find them.  This can be used to specify programs',
-#                       '# other than vanilla latex and pdflatex, such as the xe varieties of either one,',
-#                       '# if unicode is required.',
-#                       '#',
-#                       '# If these are not set, the package defaults (set when you installed.',
-#                       '# Template::Latex) will be used',
-#                    ],
-#    configurable => 1,
-#    writeable    => 1,
-#);
-#
-#declare_config_key (
-#    section      => 'programs',
-#    name         => 'latex',
-#    default      => '/usr/bin/latex',
-#    summary      => 'path to latex',
-#    description  => [  '# For latex and pdflatex, specify  full path.  These will be used to configure',
-#                       '# Template::Latex so it can find them.  This can be used to specify programs',
-#                       '# other than vanilla latex and pdflatex, such as the xe varieties of either one,',
-#                       '# if unicode is required.',
-#                       '#',
-#                       '# If these are not set, the package defaults (set when you installed.',
-#                       '# Template::Latex) will be used',
-#                    ],
-#    configurable => 1,
-#    writeable    => 1,
-#);
-#
-#declare_config_key (
-#    section      => 'programs',
-#    name         => 'dvips',
-#    default      => '/usr/bin/dvips',
-#    summary      => 'path to dvips',
-#    description  => [  '# For latex and pdflatex, specify  full path.  These will be used to configure',
-#                       '# Template::Latex so it can find them.  This can be used to specify programs',
-#                       '# other than vanilla latex and pdflatex, such as the xe varieties of either one,',
-#                       '# if unicode is required.',
-#                       '#',
-#                       '# If these are not set, the package defaults (set when you installed.',
-#                       '# Template::Latex) will be used',
-#                    ],
-#    configurable => 1,
-#    writeable    => 1,
-#);
 
 declare_config_key (
     section      => 'programs',
@@ -935,10 +913,42 @@ declare_config_key (
 );
 
 declare_config_key (
-    section      => 'main',
+    section      => 'zmain',
     name         => 'io_lineitem_columns',
-    default      => 'qw(unit onhand sellprice discount linetotal)',
+    default      => [ qw(unit onhand sellprice discount linetotal) ],
     summary      => 'io_lineitem_columns',
+    description  => [  '',
+                    ],
+    configurable => 1,
+    writeable    => 1,
+);
+
+declare_config_key (
+    section      => 'main',
+    name         => 'scripts',
+    default      => [ qw(
+                        aa.pl am.pl ap.pl ar.pl arap.pl arapprn.pl
+                        gl.pl ic.pl ir.pl is.pl oe.pl pe.pl
+                    ) ],
+    summary      => 'Old Scripts',
+    description  => [  '',
+                    ],
+    configurable => 0,
+    writeable    => 0,
+);
+
+declare_config_key (
+    section      => 'main',
+    name         => 'newscripts',
+    default      => [ qw(
+                        account.pl admin.pl asset.pl budget_reports.pl budgets.pl business_unit.pl
+                        configuration.pl contact.pl contact_reports.pl drafts.pl
+                        file.pl goods.pl import_csv.pl inventory.pl invoice.pl inv_reports.pl
+                        journal.pl login.pl lreports_co.pl menu.pl order.pl payment.pl payroll.pl
+                        pnl.pl recon.pl report_aging.pl reports.pl setup.pl taxform.pl template.pl
+                        timecard.pl transtemplate.pl trial_balance.pl user.pl vouchers.pl
+                    ) ],
+    summary      => 'New Scripts',
     description  => [  '',
                     ],
     configurable => 0,
@@ -955,3 +965,85 @@ declare_config_key (
     configurable => 1,
     writeable    => 1,
 );
+
+# The following Keys are Depricated or have been renamed
+declare_config_key (
+    section      => 'main',
+    name         => 'cssdir',
+    default      => 'deprecated',
+    summary      => 'please rename to css_uri',
+    description  => [ 'deprecated',],
+    configurable => 0,
+    writeable    => 0,
+    deprecated   => 1,
+    replacedby   => 'css_uri',
+);
+
+declare_config_key (
+    section      => 'main',
+    name         => 'fs_cssdir',
+    default      => 'deprecated',
+    summary      => 'please rename to css_ondisk',
+    description  => [ 'deprecated',],
+    configurable => 1,
+    writeable    => 1,
+    deprecated   => 1,
+    replacedby   => 'css_ondisk',
+);
+
+#declare_config_key (
+#    section      => 'programs',
+#    name         => 'pdflatex',
+#    default      => '/usr/bin/pdflatex',
+#    summary      => 'path to pdflatex',
+#    description  => [  '# For latex and pdflatex, specify  full path.  These will be used to configure',
+#                       '# Template::Latex so it can find them.  This can be used to specify programs',
+#                       '# other than vanilla latex and pdflatex, such as the xe varieties of either one,',
+#                       '# if unicode is required.',
+#                       '#',
+#                       '# If these are not set, the package defaults (set when you installed.',
+#                       '# Template::Latex) will be used',
+#                    ],
+#    configurable => 0,
+#    writeable    => 0,
+#    deprecated   => 1,
+#);
+#
+#declare_config_key (
+#    section      => 'programs',
+#    name         => 'latex',
+#    default      => '/usr/bin/latex',
+#    summary      => 'path to latex',
+#    description  => [  '# For latex and pdflatex, specify  full path.  These will be used to configure',
+#                       '# Template::Latex so it can find them.  This can be used to specify programs',
+#                       '# other than vanilla latex and pdflatex, such as the xe varieties of either one,',
+#                       '# if unicode is required.',
+#                       '#',
+#                       '# If these are not set, the package defaults (set when you installed.',
+#                       '# Template::Latex) will be used',
+#                    ],
+#    configurable => 0,
+#    writeable    => 0,
+#    deprecated   => 1,
+#    replacedby   => 'latex boolean',
+#);
+#
+#declare_config_key (
+#    section      => 'programs',
+#    name         => 'dvips',
+#    default      => '/usr/bin/dvips',
+#    summary      => 'path to dvips',
+#    description  => [  '# For latex and pdflatex, specify  full path.  These will be used to configure',
+#                       '# Template::Latex so it can find them.  This can be used to specify programs',
+#                       '# other than vanilla latex and pdflatex, such as the xe varieties of either one,',
+#                       '# if unicode is required.',
+#                       '#',
+#                       '# If these are not set, the package defaults (set when you installed.',
+#                       '# Template::Latex) will be used',
+#                    ],
+#    configurable => 0,
+#    writeable    => 0,
+#    deprecated   => 1,
+#);
+
+
