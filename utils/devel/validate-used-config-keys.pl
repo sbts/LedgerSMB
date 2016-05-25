@@ -17,7 +17,7 @@ chomp($repodir);
 # for now we use grep here, perhaps we should in the future refactor and use native perl.
 #my $usedkeys_raw = `egrep -i -r --include=*.[pP][lmLM] --exclude-dir=*/doc/ --exclude-dir=*/t/ --exclude-dir=blib --exclude=validate-used-config-keys.pl --exclude=test.pl 'LedgerSMB::Sysconfig::[0-9a-zA-Z_-]*' "$repodir"/**`;
 #$usedkeys_raw =~ s|(.*/)([^/]*)(:.*LedgerSMB::Sysconfig::)([0-9a-zA-Z_-]*)(.*)|$4|g;
-my $usedkeys_raw = `egrep -i -hr --include=*.[pP][lmLM] --exclude-dir=*/doc/ --exclude-dir=*/t/ --exclude-dir=blib --exclude=validate-used-config-keys.pl --exclude=test.pl 'LedgerSMB::Sysconfig::' "$repodir"/**`;
+my $usedkeys_raw = `egrep -i -hr --include=*.[pP][lmLM] --exclude-dir=*/doc/ --exclude-dir=*/t/ --exclude-dir=blib --exclude=validate-used-config-keys.pl --exclude=test.pl --exclude=test-sysconfig.pl 'LedgerSMB::Sysconfig::' "$repodir"/**`;
 $usedkeys_raw =~ s|(.*LedgerSMB::Sysconfig::)([0-9a-zA-Z_-]*)(.*)|$2|g;
 my %usedkeys = map { $_ => 1 } split(/\n/, $usedkeys_raw);
 my @usedkeys = sort keys %usedkeys;
