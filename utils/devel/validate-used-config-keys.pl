@@ -3,10 +3,11 @@
 # tests should be run from
 # t/12-sysconfig.t
 use LedgerSMB::Sysconfig;
-use Cwd ;
-use List::MoreUtils qw/uniq/;
 use strict;
 use warnings;
+use Cwd ;
+use Test::More; # plan automatically generated below
+use File::Find;
 
 my $ignore_regex = qr/EntryStore|environment\.PATH|database\.host|database\.port|database\.sslmode|log4perl_.*|printers\./;
 my $old_sysconfig = 0;
@@ -22,12 +23,31 @@ if ( ! -r "$repodir/lib/LedgerSMB.pm" ) {
     exit;
 }
 
+my $search_regex;
+my $matchingstrings;
+sub search {
+    $matchingstrings = '';
+    return if $File::Find::name !~ m/\.([pP][lmLM])$/;
+    return if $File::Find::dir  !~ m%.*/doc/|.*/t/|blib%;
+#print '.';
+    my $tmpfilename = $File::Find::name;
+    my $filename = Cwd::abs_path( "$repodir/$tmpfilename" );
+#    my $filename = getcwd . "/$tmpfilename";
+#    print "$filename\n";
+    return if ( ! defined $filename );
+#    print "filename = '$filename'\n";
+    open ( my $inputfile, '<', $filename ) or die "$!";
+    my @matchingstrings = grep { $_ =~ $search_regex } ( <$inputfile> );
+#    print "@matchingstrings  $search_regex\n";
+    #return $matchingstrings;
+}
+
 # $match_pattern is used to filter the files with system grep
 # $file is a shell file glob relative to $repodir.  it would normally be a specific path/name or '**' for all files
 # $substitution_pattern should have at least 1 sub expressions, only $1 (the result of the first sub expression is returned, everything else is deleted.
-sub code_grep( $ $ $ $ ) {
+sub code_grep {
     my ( $match_pattern, $file, $substitution_pattern, $ignore_regex ) = @_;
-    if ( ! defined $ignore_regex ) { $ignore_regex = 'No Ignores'; } # default to a regex that would never be a valid keyname
+    #if ( ! defined $ignore_regex ) { $ignore_regex = 'No Ignores'; } # default to a regex that would never be a valid keyname
     # #### example code to Get all of the files in the current dir and all the subdirs and do something with them
     #use File::Find;
     ## Run this program and give it the arg elementTake57a_inertia
@@ -47,9 +67,12 @@ sub code_grep( $ $ $ $ ) {
     #    }, "."
     #);
     # for now we use grep here, perhaps we should in the future refactor and use native perl.
-    my $keys = `egrep -i -hr --include=*.[pP][lmLM] --exclude-dir=*/doc/ --exclude-dir=*/t/ --exclude-dir=blib --exclude=validate-used-config-keys.pl --exclude=test.pl --exclude=test-sysconfig.pl $match_pattern "$repodir/"$file`;
+#    my $keys = `egrep -i -hr --include=*.[pP][lmLM] --exclude-dir=*/doc/ --exclude-dir=*/t/ --exclude-dir=blib --exclude=validate-used-config-keys.pl --exclude=test.pl --exclude=test-sysconfig.pl $match_pattern "$repodir/"$file`;
+    $search_regex = $match_pattern;
+    find(\&search, '.');
+    my $keys = $matchingstrings;
     $keys =~ s|$substitution_pattern|$1|g;              # strip everything except the portion matching the first subexpression
-    $keys =~ s/$ignore_regex//g;                        # strip all keys these keys from the result as we want to ignore them for various reasons
+    $keys =~ s/$ignore_regex//g if ( ! defined $ignore_regex );                        # strip all keys these keys from the result as we want to ignore them for various reasons
     my %keys = map { $_ => 1 } split(/\n/, $keys);      # create a hash from the result disposing of duplicates
     my @result = sort { "\L$a" cmp "\L$b" } keys %keys; # sort the keys case insensitively
     return @result;
