@@ -345,7 +345,10 @@ fbsd_feature_OpenOffice:
 #   make cpan
 #       installs any remaining perl dependancies using cpanm
 cpan:
-	cpanm --local-lib --quiet --notest  --with-feature=starman --installdeps .
+#FIXME: get a sane dir sorted for --local-lib
+#       this will require adding explicit local-lib support to .psgi I'd think
+#	cpanm --local-lib $(dir_LocalLib)--quiet --notest  --with-feature=starman --installdeps .
+	cpanm --quiet --notest  --with-feature=starman --installdeps .
 
 
 #   make feature_PDF
