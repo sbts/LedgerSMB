@@ -1,0 +1,57 @@
+# Core packages provided by Fedora 24
+PKGS_essential := perl-devel perl-CPAN perl-App-cpanminus
+PKGS_essential += postgresql make gcc perl-DBD-Pg
+PKGS_essential += perl-Starman
+PKGS_perlmodules := perl-CGI-Emulate-PSGI perl-CGI-Simple perl-Config-IniFiles
+PKGS_perlmodules += perl-DBD-Pg perl-DBI perl-DateTime perl-DateTime-Format-Strptime
+PKGS_perlmodules += perl-Digest-MD5 perl-File-MimeInfo perl-JSON-XS
+PKGS_perlmodules += perl-Locale-Maketext perl-Locale-Maketext-Lexicon
+PKGS_perlmodules += perl-Log-Log4perl perl-MIME-Base64 perl-MIME-Lite perl-Math-BigInt-GMP
+PKGS_perlmodules += perl-Moose perl-Number-Format perl-Plack perl-Template-Toolkit
+PKGS_perlmodules += perl-namespace-autoclean perl-MooseX-NonMoose
+PKGS_feature_PDF := perl-TeX-Encode texlive
+PKGS_feature_PDF_utf8 := 
+PKGS_feature_OpenOffice := 
+PKGS_dojo := nodejs java-1.7.0-openjdk
+
+installer := sudo yum install
+
+#   make dependencies
+#       installs all dependencies for a system
+dependencies: essential perlmodules cpan
+
+#   make all_dependencies
+#       installs all dependencies for a system Including all features except feature_PDF_utf8
+all_dependencies: dependencies feature_PDF feature_OpenOffice
+
+#   make essential
+#       installs just the "can't do without these" dependencies
+essential:
+	$(installer) $(PKGS_essential)
+
+#   make perlmodules
+#       installs all known system packaged perl modules we depend on
+perlmodules:
+	$(installer) $(PKGS_perlmodules)
+
+#   make feature_PDF
+#       installs system packages for generating PDF/Postscript output
+feature_PDF:
+	$(installer) $(PKGS_feature_PDF)
+
+#   make feature_PDF_utf8
+#       Installs system equivalent texlive-xetex to allow UTF8 ouput in PDF/Postscript output
+feature_PDF_utf8: feature_PDF
+	$(installer) $(PKGS_feature_PDF_utf8)
+
+#   make feature_OpenOffice
+#       Installs system packages for generating OpenOffice output
+
+feature_OpenOffice:
+	$(installer) $(PKGS_feature_OpenOffice)
+
+#   make dependencies_dojo
+#       Installs system packages required to build our minified dojo
+dependencies_dojo:
+	$(installer) $(PKGS_dojo)
+

@@ -1,0 +1,61 @@
+
+PKGS_essential := cpanminus postgresql make gcc libdbd-pg-perl
+PKGS_essential += starman
+PKGS_perlmodules := libcgi-emulate-psgi-perl libcgi-simple-perl libconfig-inifiles-perl
+PKGS_perlmodules += libdbd-pg-perl libdbi-perl libdatetime-perl
+PKGS_perlmodules += libdatetime-format-strptime-perl libdigest-md5-perl
+PKGS_perlmodules += libfile-mimeinfo-perl libjson-xs-perl libjson-perl
+PKGS_perlmodules += liblocale-maketext-perl liblocale-maketext-lexicon-perl
+PKGS_perlmodules += liblog-log4perl-perl libmime-base64-perl libmime-lite-perl
+PKGS_perlmodules += libmath-bigint-gmp-perl libmoose-perl libnumber-format-perl
+PKGS_perlmodules += libpgobject-perl libpgobject-simple-perl libpgobject-simple-role-perl
+PKGS_perlmodules += libpgobject-util-dbmethod-perl libplack-perl libtemplate-perl
+PKGS_perlmodules += libnamespace-autoclean-perl libmoosex-nonmoose-perl
+PKGS_feature_PDF := libtemplate-plugin-latex-perl libtex-encode-perl
+PKGS_feature_PDF := texlive-latex-recommended
+PKGS_feature_PDF_utf8 := texlive-xetex
+PKGS_feature_OpenOffice := libopenoffice-oodoc-perl
+
+PKGS_dojo := nodejs default-jre-headless
+
+installer := sudo apt-get install
+
+#   make dependencies
+#       installs all dependencies for a system
+dependencies: essential perlmodules cpan
+
+#   make all_dependencies
+#       installs all dependencies for a system Including all features except feature_PDF_utf8
+all_dependencies: dependencies feature_PDF feature_OpenOffice
+
+#   make essential
+#       installs just the "can't do without these" dependencies
+essential:
+	$(installer) $(PKGS_essential)
+
+#   make perlmodules
+#       installs all known system packaged perl modules we depend on
+perlmodules:
+	$(installer) $(PKGS_perlmodules)
+
+#   make feature_PDF
+#       installs system packages for generating PDF/Postscript output
+feature_PDF:
+	$(installer) $(PKGS_feature_PDF)
+
+#   make feature_PDF_utf8
+#       Installs system equivalent texlive-xetex to allow UTF8 ouput in PDF/Postscript output
+feature_PDF_utf8: feature_PDF
+	$(installer) $(PKGS_feature_PDF_utf8)
+
+#   make feature_OpenOffice
+#       Installs system packages for generating OpenOffice output
+
+feature_OpenOffice:
+	$(installer) $(PKGS_feature_OpenOffice)
+
+#   make dependencies_dojo
+#       Installs system packages required to build our minified dojo
+dependencies_dojo:
+	$(installer) $(PKGS_dojo)
+

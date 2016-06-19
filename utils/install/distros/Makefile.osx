@@ -1,0 +1,50 @@
+
+PKGS_essential := 
+PKGS_perlmodules := 
+PKGS_feature_PDF := 
+PKGS_feature_PDF_utf8 := 
+PKGS_feature_OpenOffice := 
+PKGS_dojo := nodejs
+
+installer := pkgin -y install
+
+
+#   make dependencies
+#       installs all dependencies for a system
+dependencies: essential perlmodules cpan
+
+#   make all_dependencies
+#       installs all dependencies for a system Including all features except feature_PDF_utf8
+all_dependencies: dependencies feature_PDF feature_OpenOffice
+
+#   make essential
+#       installs just the "can't do without these" dependencies
+essential:
+	$(installer) $(PKGS_essential)
+
+#   make perlmodules
+#       installs all known system packaged perl modules we depend on
+perlmodules:
+	$(installer) $(PKGS_perlmodules)
+
+#   make feature_PDF
+#       installs system packages for generating PDF/Postscript output
+feature_PDF:
+	$(installer) $(PKGS_feature_PDF)
+
+#   make feature_PDF_utf8
+#       Installs system equivalent texlive-xetex to allow UTF8 ouput in PDF/Postscript output
+feature_PDF_utf8: feature_PDF
+	$(installer) $(PKGS_feature_PDF_utf8)
+
+#   make feature_OpenOffice
+#       Installs system packages for generating OpenOffice output
+
+feature_OpenOffice:
+	$(installer) $(PKGS_feature_OpenOffice)
+
+#   make dependencies_dojo
+#       Installs system packages required to build our minified dojo
+dependencies_dojo:
+	$(installer) $(PKGS_dojo)
+
