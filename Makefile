@@ -20,6 +20,7 @@ DEB_feature_PDF := libtemplate-plugin-latex-perl libtex-encode-perl
 DEB_feature_PDF := texlive-latex-recommended
 DEB_feature_PDF_utf8 := texlive-xetex
 DEB_feature_OpenOffice := libopenoffice-oodoc-perl
+DEB_dojo := nodejs default-jre-headless
 
 # Core packages provided by Fedora 24
 RHEL_essential := perl-devel perl-CPAN perl-App-cpanminus
@@ -35,14 +36,44 @@ RHEL_perlmodules += perl-namespace-autoclean perl-MooseX-NonMoose
 RHEL_feature_PDF := perl-TeX-Encode texlive
 RHEL_feature_PDF_utf8 := 
 RHEL_feature_OpenOffice := 
+RHEL_dojo := nodejs java-1.7.0-openjdk
 
 FBSD_essential := 
 FBSD_perlmodules := 
 FBSD_feature_PDF := 
 FBSD_feature_OpenOffice := 
+FBSD_dojo := node
 
-APT_GET = sudo apt-get install
-YUM = sudo yum install
+GENTOO_essential := 
+GENTOO_perlmodules := 
+GENTOO_feature_PDF := 
+GENTOO_feature_OpenOffice := 
+GENTOO_dojo := nodejs virtual/jre
+
+OSX_essential := 
+OSX_perlmodules := 
+OSX_feature_PDF := 
+OSX_feature_OpenOffice := 
+OSX_dojo := nodejs
+
+ARCH_essential := 
+ARCH_perlmodules := 
+ARCH_feature_PDF := 
+ARCH_feature_OpenOffice := 
+ARCH_dojo := nodejs
+
+# https://nodejs.org/en/download/package-manager/
+# provides info on node packages and installers for many distros
+installer_deb := sudo apt-get install
+installer_rhel := sudo yum install
+installer_fbsd := pkg install
+installer_gentoo := emerge --ask
+installer_suse := zypper ar
+installer_osx := pkgin -y install
+installer_arch := packman -S
+
+#CPANM_args := --local-lib $(dir_LocalLib) --quiet --notest --installdeps
+CPANM_args := $(dir_LocalLib) --quiet --notest --installdeps
 
 # Lets try and work out what OS and DISTRO we are running on
 # some usefull info here http://linuxmafia.com/faq/Admin/release-files.html
@@ -147,16 +178,25 @@ ifeq ($(OSTYPE),DEBIAN)
 OS_feature_PDF        := deb_feature_PDF
 OS_feature_PDF_utf8   := deb_feature_PDF_utf8
 OS_feature_OpenOffice := deb_feature_OpenOffice
+dependencies_dojo: deb_dojo
 endif
 ifeq ($(OSTYPE),REDHAT)
 OS_feature_PDF        := rhel_feature_PDF
 OS_feature_PDF_utf8   := rhel_feature_PDF_utf8
 OS_feature_OpenOffice := rhel_feature_OpenOffice
+dependencies_dojo: rhel_dojo
 endif
 ifeq ($(OSTYPE),FREEBSD)
 OS_feature_PDF        := fbsd_feature_PDF
 OS_feature_PDF_utf8   := fbsd_feature_PDF_utf8
 OS_feature_OpenOffice := fbsd_feature_OpenOffice
+dependencies_dojo: fbsd_dojo
+endif
+ifeq ($(OSTYPE),GENTOO)
+OS_feature_PDF        := gentoo_feature_PDF
+OS_feature_PDF_utf8   := gentoo_feature_PDF_utf8
+OS_feature_OpenOffice := gentoo_feature_OpenOffice
+dependencies_dojo: gentoo_dojo
 endif
 
 # make help
@@ -232,7 +272,7 @@ help:
 
 # make dojo
 #   builds dojo for production/release
-dojo:
+dojo: $(dependencies_dojo)
 	rm -rf UI/js/;
 	cd UI/js-src/lsmb/ \
             && ../util/buildscripts/build.sh --profile lsmb.profile.js \
@@ -256,9 +296,10 @@ dist: dojo
 #   Preferring system perl modules over cpan ones
 #   It attempts to detect OS type if OSTYPE is not set
 #   Valid OS types are
-#       - debian
-#       - redhat
-#       - freebsd
+#       - DEBIAN
+#       - REDHAT
+#       - FREEBSD
+#       - GENTOO
 ifeq ($(OSTYPE),DEBIAN)
 dependencies: debian
 all_dependencies: all_debian
@@ -271,6 +312,10 @@ ifeq ($(OSTYPE),FREEBSD)
 dependencies: freebsd
 all_dependencies: all_freebsd
 endif
+ifeq ($(OSTYPE),GENTOO)
+dependencies: gentoo
+all_dependencies: all_gentoo
+endif
 #OSDISTRO
 
 #   make debian
@@ -282,23 +327,25 @@ all_debian: debian deb_feature_PDF deb_feature_OpenOffice
 #   make deb_essential
 #       installs just the "can't do without these" dependencies
 deb_essential:
-	$(APT_GET) $(DEB_essential)
+	$(installer) $(DEB_essential)
 #   make deb_perlmodules
 #       installs all known deb packaged perl modules we depend on
 deb_perlmodules:
-	$(APT_GET) $(DEB_perlmodules)
+	$(installer) $(DEB_perlmodules)
 #   make deb_feature_PDF
 #       installs deb packages for generating PDF/Postscript output
 deb_feature_PDF:
-	$(APT_GET) $(DEB_feature_PDF)
+	$(installer) $(DEB_feature_PDF)
 #   make deb_feature_PDF_utf8
 #       Installs texlive-xetex to allow UTF8 ouput in PDF/Postscript output
 deb_feature_PDF_utf8: deb_feature_PDF
-	$(APT_GET) $(DEB_feature_PDF_utf8)
+	$(installer) $(DEB_feature_PDF_utf8)
 #   make deb_feature_OpenOffice
 #       Installs deb package for generating OpenOffice output
 deb_feature_OpenOffice:
-	$(APT_GET) $(DEB_feature_OpenOffice)
+	$(installer) $(DEB_feature_OpenOffice)
+deb_dojo:
+	$(installer) $(DEB_dojo)
 
 
 
@@ -311,23 +358,25 @@ all_redhat: redhat rhel_feature_PDF rhel_feature_OpenOffice
 #   make rhel_essential
 #       installs just the "can't do without these" dependencies
 rhel_essential:
-	$(YUM) $(RHEL_essential)
+	$(installer) $(RHEL_essential)
 #   make rhel_perlmodules
 #       installs all known rpm packaged perl modules we depend on
 rhel_perlmodules:
-	$(YUM) $(RHEL_perlmodules)
+	$(installer) $(RHEL_perlmodules)
 #   make rhel_feature_PDF
 #       installs rpm packages for generating PDF/Postscript output
 rhel_feature_PDF:
-	$(YUM) $(RHEL_feature_PDF)
+	$(installer) $(RHEL_feature_PDF)
 #   make rhel_feature_PDF_utf8
 #       Installs texlive-xetex to allow UTF8 ouput in PDF/Postscript output
 rhel_feature_PDF_utf8: rhel_feature_PDF
-#	$(YUM) $(RHEL_feature_PDF_utf8)
+#	$(installer) $(RHEL_feature_PDF_utf8)
 #   make rhel_feature_OpenOffice
 #       Installs rpm package for generating OpenOffice output
 rhel_feature_OpenOffice:
-#	$(YUM) $(RHEL_feature_OpenOffice)
+#	$(installer) $(RHEL_feature_OpenOffice)
+rhel_dojo:
+	$(installer) $(RHEL_dojo)
 
 
 #   make freebsd
@@ -336,25 +385,42 @@ freebsd:
 	@echo "We currently don't do anything special on a freebsd system"
 #   make freebsd_all
 #       installs some known dependencies for a FreeBSD system
-all_freebsd: freebsd
+all_freebsd: freebsd fbsd_feature_PDF fbsd_feature_PDF_utf8 fbsd_feature_OpenOffice
 fbsd_feature_PDF:
 fbsd_feature_PDF_utf8:
 fbsd_feature_OpenOffice:
-
+fbsd_dojo:
+	$(installer) $(FBSD_dojo)
+#   make gentoo
+#       installs some known dependencies for a Gentoo system
+gentoo: gentoo_essential gentoo_perlmodules
+gentoo_essential:
+	$(installer) GENTOO_essential
+gentoo_perlmodules:
+	$(installer) GENTOO_perlmodules
+#   make all_gentoo
+#       installs some known dependencies for a FreeBSD system
+all_gentoo: gentoo gentoo_feature_PDF gentoo_feature_PDF_utf8 gentoo_feature_OpenOffice
+gentoo_feature_PDF:
+gentoo_feature_PDF_utf8:
+gentoo_feature_OpenOffice:
+gentoo_dojo:
+	cp /etc/portage/package.use /tmp/package.use
+	$(warning Modifying /etc/portage/package.use to configure jre as headless
+	sudo sed -i.old '|[^#]virtual/jre|d ; $ a virtual/jre headless-awt -alsa -cups' /etc/portage/package.use
+	$(installer_gentoo) $(GENTOO_dojo)
 
 #   make cpan
 #       installs any remaining perl dependancies using cpanm
 cpan:
 #FIXME: get a sane dir sorted for --local-lib
 #       this will require adding explicit local-lib support to .psgi I'd think
-#	cpanm --local-lib $(dir_LocalLib)--quiet --notest  --with-feature=starman --installdeps .
-	cpanm --quiet --notest  --with-feature=starman --installdeps .
-
+	cpanm --with-feature=starman $(CPANM_args) .
 
 #   make feature_PDF
 #       Install system and cpan packages for generating PDF/Postscript output
 feature_PDF: $(OS_feature_PDF)
-	cpanm --local-lib --quiet --notest --with-feature=latex-pdf-ps --with-feature=latex-pdf-images --installdeps .
+	cpanm --with-feature=latex-pdf-ps --with-feature=latex-pdf-images $(CPANM_args) .
 
 #   make feature_PDF_utf8
 #       Install system and cpan packages for UTF8 ouput in PDF/Postscript output
@@ -363,7 +429,7 @@ feature_PDF_utf8: $(OS_feature_PDF_utf8) feature_PDF
 #   make feature_OpenOffice
 #       Install system and cpan packages for generating OpenOffice output
 feature_OpenOffice: $(OS_feature_OpenOffice)
-	cpanm --local-lib --quiet --notest --with-feature=openoffice --installdeps .
+	cpanm --with-feature=openoffice $(CPANM_args) .
 
 
 postgres_user:
