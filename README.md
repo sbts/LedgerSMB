@@ -58,19 +58,21 @@ Installation from release tarballs is preferred over installation from GitHub.
 To get the latest development version:
 
 ```bash
- $ sudo --login --user ledgersmb
+ $ sudo --login --user ledgersmb  ## enter subshell as user ledgersmb
  $ git clone https://github.com/ledgersmb/LedgerSMB.git
  $ cd LedgerSMB
  $ git submodule update --init --recursive
+ $ exit   # exit out of subshell
 ```
 
 To get the released version 1.5.0, the commands look like:
 
 ```bash
- $ sudo --login --user ledgersmb
+ $ sudo --login --user ledgersmb  ## enter subshell as user ledgersmb
  $ git clone -b 1.5.0 https://github.com/ledgersmb/LedgerSMB.git
  $ cd LedgerSMB
  $ git submodule update --init --recursive
+ $ exit   # exit out of subshell
 ```
 
 ## Using make to install dependencies
@@ -78,10 +80,28 @@ For many distro's it may be possible to install all dependencies and some other 
 
 Try the following commands one at a time, if you are running a Debian derivative like Ubuntu, or Redhat/Fedora derivative this may __*just work*__ for you.
 
-These commands should be run as the user you want LedgerSMB to be run as (normally ledgersmb)
+### First we need to make sure we have `make` installed. 
+#### For debian/Ubuntu/Mint etc run
 ```bash
- $ make all_depndencies
+ $ apt install build-essential
+```
+#### For RedHat/Fedora etc try
+```bash
+ $ dnf install @development-tools
+```
+or
+```bash
+ $ yum install make automake gcc gcc-c++ kernel-devel
+```
+
+
+The following commands should be run as the system user you want LedgerSMB to be run as (normally ledgersmb)
+```bash
+ $ sudo --login --user ledgersmb  ## enter subshell as user ledgersmb
+ $ cd ledgersmb
+ $ make all_dependencies
  $ 
+ $ exit   # exit out of subshell
 ```
 
 
