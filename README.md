@@ -44,6 +44,12 @@ The instructions below are for getting started quickly; the [project's
 site](http://ledgersmb.org) provides [in-depth installation instructions](http://ledgersmb.org/topic/installing-ledgersmb-15)
 for production installs.
 
+## Creating a system user to run LedgerSMB
+It is recommended to create a system user that only runs LedgerSMB, this can be done by running
+```bash
+ $ adduser --system --home /opt/ledgersmb --disabled-password --disabled-login --shell /bin/bash ledgersmb
+```
+
 ## Check out the sources from GitHub
 
 Note: **Skip this step for from-tarball installs**
@@ -51,7 +57,8 @@ Installation from release tarballs is preferred over installation from GitHub.
 
 To get the latest development version:
 
-```sh
+```bash
+ $ sudo --login --user ledgersmb
  $ git clone https://github.com/ledgersmb/LedgerSMB.git
  $ cd LedgerSMB
  $ git submodule update --init --recursive
@@ -59,10 +66,22 @@ To get the latest development version:
 
 To get the released version 1.5.0, the commands look like:
 
-```
+```bash
+ $ sudo --login --user ledgersmb
  $ git clone -b 1.5.0 https://github.com/ledgersmb/LedgerSMB.git
  $ cd LedgerSMB
  $ git submodule update --init --recursive
+```
+
+## Using make to install dependencies
+For many distro's it may be possible to install all dependencies and some other tasks using our Makefile targets.
+
+Try the following commands one at a time, if you are running a Debian derivative like Ubuntu, or Redhat/Fedora derivative this may __*just work*__ for you.
+
+These commands should be run as the user you want LedgerSMB to be run as (normally ledgersmb)
+```bash
+ $ make all_depndencies
+ $ 
 ```
 
 
@@ -76,6 +95,7 @@ page on CPAN.
 See the bottom of this section for distro specific commands to install these dependencies.
 
 *Where distro specific packages are available it's recommended to install those before installing anything via cpan*
+
 
  * PostgreSQL client libraries
  * Either:
