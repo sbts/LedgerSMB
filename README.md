@@ -73,6 +73,7 @@ The following non-Perl (system) dependencies need to be in place for the
 on the [How to install CPAN modules](http://www.cpan.org/modules/INSTALL.html)
 page on CPAN.
 See the bottom of this section for distro specific commands to install these dependencies.
+*Where distro specific packages are available it's recommended to install those before installing anything via cpan*
 
  * PostgreSQL client libraries
  * Either:
