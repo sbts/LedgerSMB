@@ -72,6 +72,7 @@ The following non-Perl (system) dependencies need to be in place for the
 ```cpanm``` command mentioned below to work, in addition to what's documented
 on the [How to install CPAN modules](http://www.cpan.org/modules/INSTALL.html)
 page on CPAN.
+See the bottom of this section for distro specific commands to install these dependencies.
 
  * PostgreSQL client libraries
  * Either:
@@ -89,6 +90,16 @@ Then, some of the features listed below have system requirements as well:
    * pdftops
  * latex-pdf-images
    * ImageMagick
+
+### Debian, Ubuntu, Mint
+```bash
+ $ apt install cpanminus postgresql make gcc libdbd-pg-perl
+```
+
+### RedHat, Fedora
+```bash
+ $ yum install perl-devel perl-CPAN perl-App-cpanminus postgresql make gcc perl-DBD-Pg
+```
 
 ## Perl module dependencies
 
